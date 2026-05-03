@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="storm_robot">
+
+  <!-- Proprietà fisiche STORM -->
+  <xacro:property name="tu_mass"     value="2.81"/>
+  <xacro:property name="wu_mass"     value="0.76"/>
+  <xacro:property name="vtu_mass"    value="0.73"/>
+  <xacro:property name="base_mass"   value="1.26"/>
+  <xacro:property name="robot_length" value="0.410"/>
+  <xacro:property name="robot_width"  value="0.305"/>
+  <xacro:property name="robot_height" value="0.120"/>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry><cylinder radius="0.06" length="0.30"/></geometry>
+      <material name="white"><color rgba="1 1 1 1"/></material>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry><cylinder radius="0.06" length="0.30"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="${base_mass}"/>
+      <inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Macro per Unità Cingolate (Tracked Units) -->
+  <xacro:macro name="tracked_unit" params="prefix y">
+    <link name="${prefix}_tracked_unit">
+      <visual>
+        <geometry><box size="${robot_length} 0.10 ${robot_height}"/></geometry>
+        <material name="grey"><color rgba="0.5 0.5 0.5 1"/></material>
+      </visual>
+      <collision>
+        <geometry><box size="${robot_length} 0.10 ${robot_height}"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="${tu_mass}"/>
+        <inertia ixx="0.005" iyy="0.005" izz="0.005" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}_tu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_tracked_unit"/>
+      <origin xyz="0 ${y} 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:tracked_unit prefix="left"  y="0.1025"/>
+  <xacro:tracked_unit prefix="right" y="-0.1025"/>
+
+  <!-- Meccanismo di Traslazione Verticale (VTM) -->
+  <joint name="vtm_joint" type="prismatic">
+    <parent link="base_link"/>
+    <child link="vtu_link"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="0" upper="0.05" effort="1000" velocity="0.1"/> 
+  </joint>
+
+  <link name="vtu_link">
+    <visual>
+      <geometry><box size="0.15 0.15 0.04"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="0.15 0.15 0.04"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="${vtu_mass}"/>
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Macro per Unità a Ruote (Wheeled Units) -->
+  <xacro:macro name="wheel" params="prefix x y">
+    <link name="${prefix}_wheel">
+      <visual>
+        <origin rpy="1.5708 0 0"/>
+        <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <origin rpy="1.5708 0 0"/>
+        <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="${wu_mass}"/>
+        <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="vtu_link"/>
+      <child link="${prefix}_wheel"/>
+      <origin xyz="${x} ${y} -0.04"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel prefix="fl" x="0.06"  y="0.08"/>
+  <xacro:wheel prefix="fr" x="0.06"  y="-0.08"/>
+  <xacro:wheel prefix="rl" x="-0.06" y="0.08"/>
+  <xacro:wheel prefix="rr" x="-0.06" y="-0.08"/>
+
+  <!-- LIDAR Hokuyo -->
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.10" rpy="0 0 0"/>
+  </joint>
+
+  
+  <gazebo reference="lidar_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <link name="lidar_link">
+    <visual>
+      <geometry><cylinder radius="0.03" length="0.05"/></geometry>
+      <material name="dark"><color rgba="0.2 0.2 0.2 1"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="0.03" length="0.05"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  
+  <gazebo reference="lidar_link">
+    <sensor type="lidar" name="hokuyo_sensor">
+      <topic>scan</topic>
+      <ignition_frame_id>lidar_link</ignition_frame_id>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>512</samples> 
+            <min_angle>-2.356</min_angle> 
+            <max_angle>2.356</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>5.00</max> 
+        </range>
+      </ray>
+      <always_on>1</always_on>
+      <visualize>false</visualize>
+    </sensor>
+  </gazebo>
+
+  <!-- Plugin DiffDrive per la locomozione -->
+  <gazebo>
+    <plugin filename="libignition-gazebo-diff-drive-system.so" name="ignition::gazebo::systems::DiffDrive">
+      <left_joint>fl_wheel_joint</left_joint>
+      <left_joint>rl_wheel_joint</left_joint>
+      <right_joint>fr_wheel_joint</right_joint>
+      <right_joint>rr_wheel_joint</right_joint>
+      <wheel_separation>0.20</wheel_separation>
+      <wheel_radius>0.05</wheel_radius>
+      <topic>cmd_vel</topic>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="libignition-gazebo-joint-state-publisher-system.so" name="ignition::gazebo::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+      <joint_name>vtm_joint</joint_name>
+      <joint_name>fl_wheel_joint</joint_name>
+      <joint_name>fr_wheel_joint</joint_name>
+      <joint_name>rl_wheel_joint</joint_name>
+      <joint_name>rr_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+</robot>
