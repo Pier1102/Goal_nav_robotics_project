@@ -41,9 +41,6 @@
         <geometry><box size="${robot_length} 0.10 ${robot_height}"/></geometry>
         <material name="grey"><color rgba="0.5 0.5 0.5 1"/></material>
       </visual>
-      <collision>
-        <geometry><box size="${robot_length} 0.10 ${robot_height}"/></geometry>
-      </collision>
       <inertial>
         <mass value="${tu_mass}"/>
         <inertia ixx="0.005" iyy="0.005" izz="0.005" ixy="0" ixz="0" iyz="0"/>
@@ -90,8 +87,11 @@
         <material name="black"/>
       </visual>
       <collision>
+
         <origin rpy="1.5708 0 0"/>
+
         <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+
       </collision>
       <inertial>
         <mass value="${wu_mass}"/>
@@ -104,6 +104,10 @@
       <origin xyz="${x} ${y} -0.04"/>
       <axis xyz="0 1 0"/>
     </joint>
+  <gazebo reference="${prefix}_wheel">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
   </xacro:macro>
 
   <xacro:wheel prefix="fl" x="0.06"  y="0.08"/>
@@ -168,15 +172,15 @@
       <left_joint>rl_wheel_joint</left_joint>
       <right_joint>fr_wheel_joint</right_joint>
       <right_joint>rr_wheel_joint</right_joint>
-      <wheel_separation>0.20</wheel_separation>
+      <wheel_separation>0.16</wheel_separation>
       <wheel_radius>0.05</wheel_radius>
-      <topic>cmd_vel</topic>
+      <topic>/model/storm/cmd_vel</topic>
     </plugin>
   </gazebo>
 
   <gazebo>
     <plugin filename="libignition-gazebo-joint-state-publisher-system.so" name="ignition::gazebo::systems::JointStatePublisher">
-      <topic>joint_states</topic>
+      <topic>/model/storm/joint_states</topic>
       <joint_name>vtm_joint</joint_name>
       <joint_name>fl_wheel_joint</joint_name>
       <joint_name>fr_wheel_joint</joint_name>
