@@ -116,25 +116,25 @@
   <xacro:wheel prefix="rr" x="-0.06" y="-0.08"/>
 
   <!-- LIDAR Hokuyo -->
-  <joint name="lidar_joint" type="fixed">
+  <joint name="lidar_joint" type="revolute">
     <parent link="base_link"/>
     <child link="lidar_link"/>
     <origin xyz="0 0 0.10" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <!-- Limiti a zero per impedire che si muova realmente -->
+    <limit lower="0" upper="0" effort="0" velocity="0"/> 
   </joint>
 
   
-  <gazebo reference="lidar_joint">
+  <!-- <gazebo reference="lidar_joint">
     <preserveFixedJoint>true</preserveFixedJoint>
-  </gazebo>
+  </gazebo> -->
 
   <link name="lidar_link">
     <visual>
       <geometry><cylinder radius="0.03" length="0.05"/></geometry>
       <material name="dark"><color rgba="0.2 0.2 0.2 1"/></material>
     </visual>
-    <collision>
-      <geometry><cylinder radius="0.03" length="0.05"/></geometry>
-    </collision>
     <inertial>
       <mass value="0.1"/>
       <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
@@ -142,28 +142,32 @@
   </link>
 
   
-  <gazebo reference="lidar_link">
-    <sensor type="lidar" name="hokuyo_sensor">
-      <topic>scan</topic>
-      <ignition_frame_id>lidar_link</ignition_frame_id>
-      <update_rate>10</update_rate>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples>512</samples> 
-            <min_angle>-2.356</min_angle> 
-            <max_angle>2.356</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.15</min>
-          <max>5.00</max> 
-        </range>
-      </ray>
-      <always_on>1</always_on>
-      <visualize>false</visualize>
-    </sensor>
-  </gazebo>
+ <gazebo reference="lidar_link">
+  <sensor name="hokuyo_sensor" type="gpu_lidar">
+    <pose>0 0 0 0 0 0</pose>
+    <topic>/model/storm/scan</topic>
+    <update_rate>10</update_rate>
+    <lidar>
+      <scan>
+        <horizontal>
+          <samples>512</samples>
+          <resolution>1</resolution>
+          <min_angle>-2.356</min_angle>
+          <max_angle>2.356</max_angle>
+        </horizontal>
+      </scan>
+      <range>
+        <min>0.15</min>
+        <max>5.0</max>
+        <resolution>0.01</resolution>
+      </range>
+      <visualize>true</visualize>
+    </lidar>
+    <always_on>true</always_on>
+    <ignition_frame_id>lidar_link</ignition_frame_id>
+  </sensor>
+</gazebo>
+
 
   <!-- Plugin DiffDrive per la locomozione -->
   <gazebo>
@@ -186,6 +190,8 @@
       <joint_name>fr_wheel_joint</joint_name>
       <joint_name>rl_wheel_joint</joint_name>
       <joint_name>rr_wheel_joint</joint_name>
+      <joint_name>lidar_joint</joint_name>
+      <update_rate>30</update_rate>
     </plugin>
   </gazebo>
 
