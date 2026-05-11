@@ -60,17 +60,14 @@ def generate_launch_description():
         executable='parameter_bridge',
         parameters=[{'use_sim_time': True}],
         arguments=[
-            #Sincronizzazione del tempo tra Rviz e GAzebo 
             '/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock',
-            # cmd_vel: Gestisce le 11 azioni di velocità angolare della DRL 
             '/model/storm/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist',
-            # Sostituisci la riga del LiDAR con questa (attenzione agli spazi attorno a @):
             '/model/storm/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            # Joints in Gazebo from ros2
             '/model/storm/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model',
-            # VTM: Controllo della traslazione verticale (opzionale per training) 
             '/model/storm/joint/vtm_joint/0/cmd_pos@std_msgs/msg/Float64]ignition.msgs.Float',
             '/model/storm/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V',
+            '/world/map_a/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/map_a/set_pose@ros_gz_interfaces/srv/SetEntityPose',
         ],
 
         output='screen'
