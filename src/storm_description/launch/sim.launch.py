@@ -15,7 +15,9 @@ def generate_launch_description():
     robot_description_config = xacro.process_file(xacro_file).toxml()
 
     # 2. Percorso della Mappa A (Map 1: corridoio da 1.2m) 
-    world_path = os.path.join(pkg_path, 'worlds', 'map_a.world')
+    #world_path = os.path.join(pkg_path, 'worlds', 'map_a.world')#
+    
+    world_path= os.path.join(pkg_path,'worlds','training_map.world')
 
     # 3. Azione per avviare Gazebo caricando direttamente la mappa 
     gazebo = IncludeLaunchDescription(
