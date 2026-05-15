@@ -34,10 +34,10 @@ def generate_launch_description():
         arguments=[
             '-topic', 'robot_description', 
             '-name', 'storm', 
-            '-x', '-1.2',
-            '-y', '2.07',
+            '-x', '-4.38',
+            '-y', '3.00',
             '-z', '0.5',
-            '-Y', '-0.4',
+            '-Y', '1.50',
         ],
         output='screen'
     )
@@ -68,7 +68,6 @@ def generate_launch_description():
             '/model/storm/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist',
             '/model/storm/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
             '/model/storm/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model',
-            '/model/storm/joint/vtm_joint/0/cmd_pos@std_msgs/msg/Float64]ignition.msgs.Float',
             '/model/storm/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V',
             '/world/training_map/control@ros_gz_interfaces/srv/ControlWorld',
             '/world/training_map/set_pose@ros_gz_interfaces/srv/SetEntityPose',

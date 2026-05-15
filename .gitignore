@@ -5,3 +5,9 @@ log/
 .idea/
 __pycache__/
 *.pyc
+storm_env/
+__pycache__/
+*.pyc
+storm_dqn/logs/
+storm_dqn/storm_agents/*.h5
+.DS_Store

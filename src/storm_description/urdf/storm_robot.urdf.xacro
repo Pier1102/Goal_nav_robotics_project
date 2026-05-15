@@ -2,10 +2,9 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="storm_robot">
 
   <!-- Proprietà fisiche STORM -->
-  <xacro:property name="tu_mass"     value="2.81"/>
-  <xacro:property name="wu_mass"     value="0.76"/>
-  <xacro:property name="vtu_mass"    value="0.73"/>
-  <xacro:property name="base_mass"   value="1.26"/>
+  <xacro:property name="tu_mass"      value="2.81"/>
+  <xacro:property name="wu_mass"      value="0.76"/>
+  <xacro:property name="base_mass"    value="1.26"/>
   <xacro:property name="robot_length" value="0.410"/>
   <xacro:property name="robot_width"  value="0.305"/>
   <xacro:property name="robot_height" value="0.120"/>
@@ -56,42 +55,19 @@
   <xacro:tracked_unit prefix="left"  y="0.1025"/>
   <xacro:tracked_unit prefix="right" y="-0.1025"/>
 
-  <!-- Meccanismo di Traslazione Verticale (VTM) -->
-  <joint name="vtm_joint" type="prismatic">
-    <parent link="base_link"/>
-    <child link="vtu_link"/>
-    <axis xyz="0 0 -1"/>
-    <limit lower="0" upper="0.05" effort="1000" velocity="0.1"/> 
-  </joint>
-
-  <link name="vtu_link">
-    <visual>
-      <geometry><box size="0.15 0.15 0.04"/></geometry>
-      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
-    </visual>
-    <collision>
-      <geometry><box size="0.15 0.15 0.04"/></geometry>
-    </collision>
-    <inertial>
-      <mass value="${vtu_mass}"/>
-      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
-    </inertial>
-  </link>
-
   <!-- Macro per Unità a Ruote (Wheeled Units) -->
+  <!-- VTM rimosso: ruote collegate direttamente a base_link -->
+  <!-- Questo elimina il joint prismatico che causava instabilità del solver -->
   <xacro:macro name="wheel" params="prefix x y">
     <link name="${prefix}_wheel">
       <visual>
         <origin rpy="1.5708 0 0"/>
         <geometry><cylinder radius="0.05" length="0.04"/></geometry>
-        <material name="black"/>
+        <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
       </visual>
       <collision>
-
         <origin rpy="1.5708 0 0"/>
-
         <geometry><cylinder radius="0.05" length="0.04"/></geometry>
-
       </collision>
       <inertial>
         <mass value="${wu_mass}"/>
@@ -99,12 +75,12 @@
       </inertial>
     </link>
     <joint name="${prefix}_wheel_joint" type="continuous">
-      <parent link="vtu_link"/>
+      <parent link="base_link"/>
       <child link="${prefix}_wheel"/>
       <origin xyz="${x} ${y} -0.04"/>
       <axis xyz="0 1 0"/>
     </joint>
-  <gazebo reference="${prefix}_wheel">
+    <gazebo reference="${prefix}_wheel">
       <mu1>1.0</mu1>
       <mu2>1.0</mu2>
     </gazebo>
@@ -120,15 +96,7 @@
     <parent link="base_link"/>
     <child link="lidar_link"/>
     <origin xyz="0 0 0.10" rpy="0 0 0"/>
-    <axis xyz="0 0 1"/>
-    <!-- Limiti a zero per impedire che si muova realmente -->
-    <limit lower="0" upper="0" effort="0" velocity="0"/> 
   </joint>
-
-  
-  <!-- <gazebo reference="lidar_joint">
-    <preserveFixedJoint>true</preserveFixedJoint>
-  </gazebo> -->
 
   <link name="lidar_link">
     <visual>
@@ -141,33 +109,31 @@
     </inertial>
   </link>
 
-  
- <gazebo reference="lidar_link">
-  <sensor name="lidar" type="gpu_lidar">
-    <pose>0 0 0 0 0 0</pose>
-    <topic>/model/storm/scan</topic>
-    <update_rate>10</update_rate>
-    <lidar>
-      <scan>
-        <horizontal>
-          <samples>512</samples>
-          <resolution>1</resolution>
-          <min_angle>-2.356</min_angle>
-          <max_angle>2.356</max_angle>
-        </horizontal>
-      </scan>
-      <range>
-        <min>0.15</min>
-        <max>5.0</max>
-        <resolution>0.01</resolution>
-      </range>
-      <visualize>true</visualize>
-    </lidar>
-    <always_on>true</always_on>
-    <ignition_frame_id>lidar_link</ignition_frame_id>
-  </sensor>
-</gazebo>
-
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>/model/storm/scan</topic>
+      <update_rate>10</update_rate>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>512</samples>
+            <resolution>1</resolution>
+            <min_angle>-2.356</min_angle>
+            <max_angle>2.356</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>5.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <visualize>true</visualize>
+      </lidar>
+      <always_on>true</always_on>
+      <ignition_frame_id>lidar_link</ignition_frame_id>
+    </sensor>
+  </gazebo>
 
   <!-- Plugin DiffDrive per la locomozione -->
   <gazebo>
@@ -185,7 +151,6 @@
   <gazebo>
     <plugin filename="libignition-gazebo-joint-state-publisher-system.so" name="ignition::gazebo::systems::JointStatePublisher">
       <topic>/model/storm/joint_states</topic>
-      <joint_name>vtm_joint</joint_name>
       <joint_name>fl_wheel_joint</joint_name>
       <joint_name>fr_wheel_joint</joint_name>
       <joint_name>rl_wheel_joint</joint_name>
