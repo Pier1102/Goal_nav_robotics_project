@@ -17,7 +17,8 @@ def generate_launch_description():
     # 2. Percorso della Mappa A (Map 1: corridoio da 1.2m) 
     #world_path = os.path.join(pkg_path, 'worlds', 'map_a.world')#
     
-    world_path= os.path.join(pkg_path,'worlds','training_map.world')
+    #world_path= os.path.join(pkg_path,'worlds','training_map.world')
+    world_path= os.path.join(pkg_path,'worlds','test_map_3.world')
 
     # 3. Azione per avviare Gazebo caricando direttamente la mappa 
     gazebo = IncludeLaunchDescription(
@@ -31,15 +32,21 @@ def generate_launch_description():
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
+        #arguments=['-topic', 'robot_description',
+           #'-name', 'storm',
+           #'-x', '-1.2', 
+           #'-y', '2.07', 
+           #'-z', '0.5', 
+           #'-Y', '-0.4'],
         arguments=[
             '-topic', 'robot_description', 
             '-name', 'storm', 
-            '-x', '-4.38',
-            '-y', '3.00',
+            '-x', '0',
+            '-y', '0',
             '-z', '0.5',
             '-Y', '1.50',
         ],
-        output='screen'
+        output='screen',
     )
 
     # 5. Pubblica lo stato del robot per le trasformazioni (TF)
@@ -69,8 +76,10 @@ def generate_launch_description():
             '/model/storm/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
             '/model/storm/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model',
             '/model/storm/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V',
-            '/world/training_map/control@ros_gz_interfaces/srv/ControlWorld',
-            '/world/training_map/set_pose@ros_gz_interfaces/srv/SetEntityPose',
+            #'/world/training_map/control@ros_gz_interfaces/srv/ControlWorld',
+            #'/world/training_map/set_pose@ros_gz_interfaces/srv/SetEntityPose',
+            '/world/test_map_3/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/test_map_3/set_pose@ros_gz_interfaces/srv/SetEntityPose',
         ],
 
         output='screen'
