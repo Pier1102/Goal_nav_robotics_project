@@ -158,4 +158,16 @@
     </plugin>
   </gazebo>
 
+
+<gazebo>
+  <plugin filename="libignition-gazebo6-odometry-publisher-system.so"
+          name="ignition::gazebo::systems::OdometryPublisher">
+    <odom_frame>odom</odom_frame>
+    <robot_base_frame>base_link</robot_base_frame>
+    <odom_topic>/model/storm/odometry</odom_topic>
+    <tf_topic>/model/storm/tf_odom</tf_topic>
+    <publish_tf>true</publish_tf>
+  </plugin>
+</gazebo>
+
 </robot>

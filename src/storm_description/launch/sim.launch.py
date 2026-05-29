@@ -14,11 +14,10 @@ def generate_launch_description():
     xacro_file = os.path.join(pkg_path, 'urdf', 'storm_robot.urdf.xacro')
     robot_description_config = xacro.process_file(xacro_file).toxml()
 
-    # 2. Percorso della Mappa A (Map 1: corridoio da 1.2m) 
-    #world_path = os.path.join(pkg_path, 'worlds', 'map_a.world')#
-    
-    #world_path= os.path.join(pkg_path,'worlds','training_map.world')
-    world_path= os.path.join(pkg_path,'worlds','test_map_3.world')
+    # 2. Seleziona la mappa da caricare in Gazebo
+    #world_path = os.path.join(pkg_path, 'worlds', 'test_map_1.world')
+    world_path = os.path.join(pkg_path, 'worlds', 'test_map_2.world')
+    #world_path= os.path.join(pkg_path,'worlds','test_map_3.world')
 
     # 3. Azione per avviare Gazebo caricando direttamente la mappa 
     gazebo = IncludeLaunchDescription(
@@ -31,24 +30,43 @@ def generate_launch_description():
     # Posizionato al centro del corridoio (x: 0, y: 0) 
     spawn_robot = Node(
         package='ros_gz_sim',
-        executable='create',
-        #arguments=['-topic', 'robot_description',
-           #'-name', 'storm',
-           #'-x', '-1.2', 
-           #'-y', '2.07', 
-           #'-z', '0.5', 
-           #'-Y', '-0.4'],
+        executable='create', 
+    #     #mappa 1 spawn    
+    #     arguments=[
+    #         '-topic', 'robot_description',
+    #         '-name', 'storm',
+    #         '-x', '-2.3',
+    #         '-y', '-3.0',
+    #         '-z', '0.5',
+    #         '-Y', '1.57',
+    #     ],
+    #     output='screen',
+    # )
+
+            #mappa 2 spawn    
         arguments=[
-            '-topic', 'robot_description', 
-            '-name', 'storm', 
-            '-x', '0',
-            '-y', '0',
-            '-z', '0.5',
-            '-Y', '1.50',
+            '-topic', 'robot_description',
+            '-name', 'storm',
+            '-x', '-4.38',
+              '-y', '3.00',
+              '-z', '0.5',
+               '-Y', '1.50',
         ],
         output='screen',
     )
 
+      #         #mappa 3 spawn    
+    #     arguments=[
+    #         '-topic', 'robot_description',
+    #         '-name', 'storm',
+    #         '-x', '0',
+    #           '-y', '0',
+    #           '-z', '0.5',
+    #            '-Y', '1.50',
+    #     ],
+    #     output='screen',
+    # )
+            
     # 5. Pubblica lo stato del robot per le trasformazioni (TF)
     node_robot_state_publisher = Node(
 
@@ -72,14 +90,13 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
         arguments=[
             '/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock',
+            '/model/storm/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry',
             '/model/storm/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist',
             '/model/storm/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
             '/model/storm/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model',
             '/model/storm/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V',
-            #'/world/training_map/control@ros_gz_interfaces/srv/ControlWorld',
-            #'/world/training_map/set_pose@ros_gz_interfaces/srv/SetEntityPose',
-            '/world/test_map_3/control@ros_gz_interfaces/srv/ControlWorld',
-            '/world/test_map_3/set_pose@ros_gz_interfaces/srv/SetEntityPose',
+            '/world/test_map_2/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/test_map_2/set_pose@ros_gz_interfaces/srv/SetEntityPose',
         ],
 
         output='screen'
