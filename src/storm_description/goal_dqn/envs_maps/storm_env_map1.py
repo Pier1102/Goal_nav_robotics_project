@@ -1,6 +1,3 @@
-#cd ~/ros_ws/src/storm_description/goal_dqn"
-#python3 -m test_codes.test_ddqn_map1
-
 import time
 import math
 import random
@@ -17,7 +14,7 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 
 # ---------------------------------------------------------------------------
-# Costanti hardware
+# Hardware constants
 # ---------------------------------------------------------------------------
 N_LIDAR        = 50
 RANGE_MAX      = 5.0
@@ -29,20 +26,20 @@ SPAWN_Z        = 0.05
 WORLD_NAME     = 'test_map_1'
 
 # ---------------------------------------------------------------------------
-# Goal — mappa 1
+# Goal — Map 1
 # ---------------------------------------------------------------------------
 GOAL_X      = -0.7
 GOAL_Y      =  0.59
 GOAL_RADIUS =  0.7
 
 # ---------------------------------------------------------------------------
-# Spawn — punti strategici
+# Spawn points
 # ---------------------------------------------------------------------------
 SPAWN_ALL = [
-    # ( 1.1190, -1.8742,  3.14),
+    ( 1.1190, -1.8742,  3.14),
     ( 2.2000,  1.3000, -1.57),
-#     (-0.8500, -1.8000,  1.57),
-#     (-2.3000, -2.7000,  1.57),
+    (-0.8500, -1.8000,  1.57),
+    (-2.3000, -2.7000,  1.57),
 ]
 
 # ---------------------------------------------------------------------------
@@ -55,20 +52,15 @@ W_PROGRESS  =   15.0
 W_HEADING   =    0.3
 
 # ---------------------------------------------------------------------------
-# Clamp odometria
+# Odometry clamp (filters wheel-slip spikes, see _get_goal_data)
 # ---------------------------------------------------------------------------
-ODOM_CLAMP       = 15.0   # clamp globale sul delta totale dal reset
-DELTA_CLAMP      =  0.10  # clamp sul progress reward (Δdist)
-STEP_DELTA_CLAMP =  0.05  # clamp incrementale per-step sullo spostamento odom
-                           # A LINEAR_VEL=0.2 m/s e step ~0.05s → spostamento
-                           # fisico plausibile ~0.01m. 0.05m include margine
-                           # generoso per curve/azioni rapide.
-                           # Spostamenti oltre questa soglia in UN SINGOLO STEP
-                           # sono trattati come slittamento/rumore odometrico.
+ODOM_CLAMP       = 15.0   # global safety clamp on total displacement
+DELTA_CLAMP      =  0.10  # clamp on the progress reward term (Δdist)
+STEP_DELTA_CLAMP =  0.05  # per-step clamp on raw odometry displacement
 
 
 # ---------------------------------------------------------------------------
-# Nodo ROS2
+# ROS 2 node
 # ---------------------------------------------------------------------------
 class _RosNode(Node):
     def __init__(self):
@@ -147,12 +139,12 @@ class _RosNode(Node):
             print('  [set_pose] timeout!')
             self._pause(False)
         except Exception as e:
-            print(f'  [set_pose] errore: {e}')
+            print(f'  [set_pose] error: {e}')
             self._pause(False)
 
 
 # ---------------------------------------------------------------------------
-# StormEnv map1
+# StormEnv — Map 1
 # ---------------------------------------------------------------------------
 class StormEnv(gym.Env):
 
@@ -173,13 +165,12 @@ class StormEnv(gym.Env):
         self.odom_y0    = 0.0
         self.ep_count   = 0
 
-        # Stato clamp incrementale — aggiornato in _get_goal_data()
+        # Incremental clamp state, updated in _get_goal_data()
         self._last_odom_raw_x = None
         self._last_odom_raw_y = None
         self._est_dx = 0.0
         self._est_dy = 0.0
 
-        # Ultimi valori calcolati (per eventuale debug esterno)
         self._last_x_robot = 0.0
         self._last_y_robot = 0.0
         self._last_yaw     = 0.0
@@ -189,13 +180,13 @@ class StormEnv(gym.Env):
         self._node = _RosNode()
         threading.Thread(target=rclpy.spin, args=(self._node,), daemon=True).start()
 
-        print(f'[StormEnv map1] In attesa dei sensori...')
+        print(f'[StormEnv map1] Waiting for sensors...')
         t0 = time.time()
         while self._node.get_scan() is None or self._node.get_odom() is None:
             time.sleep(0.1)
             if time.time() - t0 > 15.0:
-                raise RuntimeError(f'Timeout sensori. Gazebo avviato con {WORLD_NAME}?')
-        print(f'[StormEnv map1] Connesso. Goal=({GOAL_X},{GOAL_Y})')
+                raise RuntimeError(f'Sensor timeout. Is Gazebo running with {WORLD_NAME}?')
+        print(f'[StormEnv map1] Connected. Goal=({GOAL_X},{GOAL_Y})')
 
     # -----------------------------------------------------------------------
     def step(self, action):
@@ -214,20 +205,10 @@ class StormEnv(gym.Env):
             self._stop()
 
         elif self._check_collision(lidar):
-            # Workaround per drift odom: se siamo vicini al goal e il lidar
-            # rileva qualcosa (potrebbe essere la bandierina del goal stessa),
-            # consideriamo GOAL invece di COLLISION.
-            if dist_now < GOAL_RADIUS * 1.8:
-                print(f'  [GOAL via proximity-collision] dist={dist_now:.3f} '
-                      f'min_lidar={np.min(lidar):.3f}')
-                reward     = R_GOAL
-                terminated = True
-                self._stop()
-            else:
-                print(f'  [COLLISION] min={np.min(lidar):.3f} dist={dist_now:.3f}')
-                reward     = R_COLLISION
-                terminated = True
-                self._stop()
+            print(f'  [COLLISION] min={np.min(lidar):.3f} dist={dist_now:.3f}')
+            reward     = R_COLLISION
+            terminated = True
+            self._stop()
 
         else:
             delta      = self.dist_prev - dist_now
@@ -259,7 +240,7 @@ class StormEnv(gym.Env):
         self.step_count = 0
         self._stop()
 
-        # Aspetta stabilizzazione odom
+        # Wait for odometry to stabilize
         time.sleep(0.3)
         prev_x, prev_y = None, None
         t0 = time.time()
@@ -274,7 +255,7 @@ class StormEnv(gym.Env):
                 prev_x, prev_y = x, y
             time.sleep(0.05)
 
-        # Aspetta scan fresco
+        # Wait for a fresh scan
         seq_before = self._node.get_scan_seq()
         t0 = time.time()
         while self._node.get_scan_seq() < seq_before + 3:
@@ -285,12 +266,12 @@ class StormEnv(gym.Env):
         self._stop()
         time.sleep(0.1)
 
-        # Salva riferimento odom STABILIZZATO
+        # Save stabilized odometry reference
         odom = self._node.get_odom()
         self.odom_x0 = odom.pose.pose.position.x if odom else self.spawn_x
         self.odom_y0 = odom.pose.pose.position.y if odom else self.spawn_y
 
-        # Reset stato clamp incrementale
+        # Reset incremental clamp state
         self._last_odom_raw_x = self.odom_x0
         self._last_odom_raw_y = self.odom_y0
         self._est_dx = 0.0
@@ -303,7 +284,7 @@ class StormEnv(gym.Env):
         self.dist_prev = obs[N_LIDAR]
 
         if exact is not None:
-            print(f'  [RESET Benchmark] spawn=({self.spawn_x:.2f},{self.spawn_y:.2f}) '
+            print(f'  [RESET benchmark] spawn=({self.spawn_x:.2f},{self.spawn_y:.2f}) '
                   f'dist_goal={obs[N_LIDAR]:.2f}m '
                   f'theta_goal0={math.degrees(obs[N_LIDAR+1]):.1f}deg')
         else:
@@ -318,15 +299,10 @@ class StormEnv(gym.Env):
 
     # -----------------------------------------------------------------------
     def _get_goal_data(self):
-        """
-        Odom RELATIVA con clamp incrementale per-step.
+        """Relative odometry with per-step incremental clamping.
 
-        Accumula lo spostamento passo-passo, limitando ogni singolo
-        incremento a STEP_DELTA_CLAMP metri. Questo filtra i picchi
-        causati da wheel-slip durante urti/collisioni, che altrimenti
-        si accumulerebbero come drift su episodi lunghi.
-
-        Clamp globale ODOM_CLAMP come ultima rete di sicurezza.
+        Filters wheel-slip spikes that would otherwise accumulate as
+        drift over long episodes. ODOM_CLAMP is a global safety net.
         """
         odom = self._node.get_odom()
         if odom is None:
@@ -339,12 +315,10 @@ class StormEnv(gym.Env):
             self._last_odom_raw_x = ox
             self._last_odom_raw_y = oy
 
-        # Spostamento RAW da ultimo step
         step_dx  = ox - self._last_odom_raw_x
         step_dy  = oy - self._last_odom_raw_y
         step_mag = math.hypot(step_dx, step_dy)
 
-        # Clamp incrementale: scarta spostamenti per-step troppo grandi
         if step_mag > STEP_DELTA_CLAMP:
             scale    = STEP_DELTA_CLAMP / step_mag
             step_dx *= scale
@@ -355,7 +329,6 @@ class StormEnv(gym.Env):
         self._last_odom_raw_x = ox
         self._last_odom_raw_y = oy
 
-        # Clamp globale: se il delta totale è assurdo, odom corrotta
         if math.hypot(self._est_dx, self._est_dy) > ODOM_CLAMP:
             return self.dist_prev, 0.0
 
@@ -367,7 +340,6 @@ class StormEnv(gym.Env):
         cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         yaw  = math.atan2(siny, cosy)
 
-        # Salva per debug esterno
         self._last_x_robot = x_robot
         self._last_y_robot = y_robot
         self._last_yaw     = yaw
