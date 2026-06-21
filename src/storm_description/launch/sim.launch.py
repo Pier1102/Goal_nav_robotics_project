@@ -26,17 +26,15 @@ def generate_launch_description():
         launch_arguments={'gz_args': f'-r {world_path}'}.items(),
     )
 
-    # 4. Nodo per inserire (spawnare) il robot STORM nella mappa 
-    # Posizionato al centro del corridoio (x: 0, y: 0) 
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create', 
-    #     #mappa 1 spawn    
+        #mappa 1 spawn    
     #     arguments=[
     #         '-topic', 'robot_description',
     #         '-name', 'storm',
     #         '-x', '-2.3',
-    #         '-y', '-3.0',
+    #         '-y', '-2.7',
     #         '-z', '0.5',
     #         '-Y', '1.57',
     #     ],
@@ -47,15 +45,15 @@ def generate_launch_description():
         arguments=[
             '-topic', 'robot_description',
             '-name', 'storm',
-            '-x', '-4.38',
+            '-x', '5.60',
               '-y', '3.00',
-              '-z', '0.5',
+              '-z', '0.00',
                '-Y', '1.50',
         ],
         output='screen',
     )
 
-      #         #mappa 3 spawn    
+    #           #mappa 3 spawn    
     #     arguments=[
     #         '-topic', 'robot_description',
     #         '-name', 'storm',
