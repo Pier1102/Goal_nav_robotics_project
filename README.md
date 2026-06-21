@@ -1,12 +1,8 @@
 # Collision Avoidance and Goal Navigation Based on Deep Reinforcement Learning
 
-ROS 2 / Gazebo workspace for a simplified STORM skid-steer robot, replicating
-the DDQN-based collision-avoidance method of Feng et al. (2021) and extending
-it with goal-directed navigation via curriculum learning across three maps.
-A classical TEB local planner is also benchmarked for comparison.
-
-Full methodology, results, and discussion are presented in the accompanying
-report.
+ROS 2 / Gazebo workspace for a simplified STORM skid-steer robot this code extends
+he DDQN-based collision-avoidance method of Feng et al. (2021)
+with goal-directed navigation via curriculum learning across three maps.
 
 ## Repository structure
 
