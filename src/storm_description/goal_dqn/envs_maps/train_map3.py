@@ -1,15 +1,16 @@
 """
-train_dqn_map3.py — DDQN su test_map_3 (mappa semplice)
-Fase 1 del curriculum: impara a navigare in spazio aperto.
+train_map3.py — DDQN on test_map_3 (simple map)
+Curriculum Phase 1: learn the basics of goal-directed navigation in an
+open environment.
 
-Avvio:
-    1. ros2 launch storm_description sim_launch_map3.py
+Run:
+    1. ros2 launch storm_description sim.launch.py   (with test_map_3 active)
     2. source ~/storm_env/bin/activate
-       python3 train_dqn_map3.py
+       python3 train_map3.py
 
-Dopo il training:
-    I pesi salvati in ~/storm_dqn/storm_agents/map3_FINAL.weights.h5
-    vanno caricati in train_dqn_map2.py come LOAD_WEIGHTS.
+After training:
+    Weights saved to ~/storm_dqn/storm_agents/map3_FINAL.weights.h5
+    are loaded by train_map2.py as LOAD_WEIGHTS for Phase 2.
 
 TensorBoard:
     tensorboard --logdir ~/storm_dqn/logs
@@ -22,20 +23,20 @@ import tensorflow as tf
 from storm_env import StormEnv
 
 # ===========================================================================
-LOAD_WEIGHTS = ''   # vuoto = parte da zero
+LOAD_WEIGHTS = ''   # empty = train from scratch
 
-MAX_EPISODES = 1500   # mappa semplice — basta meno
+MAX_EPISODES = 1500   # simple map — fewer episodes needed
 MAX_STEPS    = 1500
 
 EPSILON_START = 1.00
 EPSILON_MIN   = 0.05
-BETA          = 0.995   # ε=0.05 in ~600 ep — veloce per mappa semplice
+BETA          = 0.995   # epsilon reaches 0.05 in ~600 episodes
 
 LEARNING_RATE      = 0.00025
 BUFFER_SIZE        = 50_000
 BATCH_SIZE         = 64
 GAMMA              = 0.99
-TARGET_UPDATE_FREQ = 1000   # aggiorna spesso — episodi brevi sulla mappa semplice
+TARGET_UPDATE_FREQ = 1000   # frequent updates — short episodes on this map
 WINDOW_SIZE        = 50
 
 STOP_RATE = 0.85
@@ -98,11 +99,11 @@ def train_step(q_net, target_net, optimizer,
 _q_net_ref = None
 
 def _handle_sigint(sig, frame):
-    print('\n[!] Ctrl+C — salvo pesi...')
+    print('\n[!] Ctrl+C — saving weights...')
     if _q_net_ref is not None:
         path = os.path.join(SAVE_DIR, 'map3_interrupt.weights.h5')
         _q_net_ref.save_weights(path)
-        print(f'    Salvato: {path}')
+        print(f'    Saved: {path}')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, _handle_sigint)
@@ -118,9 +119,9 @@ def main():
     os.makedirs(log_dir, exist_ok=True)
     writer = tf.summary.create_file_writer(log_dir)
 
-    print('Creazione environment map3...')
+    print('Creating map3 environment...')
     env = StormEnv(max_steps=MAX_STEPS)
-    print('Environment pronto.\n')
+    print('Environment ready.\n')
 
     q_net      = build_qnet('online')
     target_net = build_qnet('target')
@@ -130,9 +131,9 @@ def main():
     load_path = os.path.expanduser(LOAD_WEIGHTS) if LOAD_WEIGHTS else ''
     if load_path and os.path.exists(load_path):
         q_net.load_weights(load_path)
-        print(f'Pesi caricati: {load_path}')
+        print(f'Weights loaded: {load_path}')
     elif load_path:
-        print(f'[ATTENZIONE] {load_path} non trovato — parto da zero.')
+        print(f'[WARNING] {load_path} not found — training from scratch.')
 
     target_net.set_weights(q_net.get_weights())
     _q_net_ref = q_net
@@ -150,9 +151,9 @@ def main():
     t_start      = time.time()
 
     print('=' * 65)
-    print('MAP3 — DDQN Mappa Semplice (Curriculum Fase 1)')
-    print(f'ε={EPSILON_START}→{EPSILON_MIN} (β={BETA}) | steps={MAX_STEPS}')
-    print(f'Stop auto: goal_rate_{WINDOW_SIZE} >= {STOP_RATE:.0%} per {STOP_N} ep')
+    print('MAP3 — DDQN Simple Map (Curriculum Phase 1)')
+    print(f'eps={EPSILON_START}->{EPSILON_MIN} (beta={BETA}) | steps={MAX_STEPS}')
+    print(f'Auto-stop: goal_rate_{WINDOW_SIZE} >= {STOP_RATE:.0%} for {STOP_N} episodes')
     print(f'TensorBoard: tensorboard --logdir {LOG_DIR}')
     print('=' * 65)
 
@@ -162,7 +163,7 @@ def main():
         ep_reward = 0.0
         ep_steps  = 0
         losses    = []
-        esito     = 'TIMEOUT'
+        outcome   = 'TIMEOUT'
 
         for _ in range(MAX_STEPS):
             if random.random() < epsilon:
@@ -175,7 +176,7 @@ def main():
             done = terminated or truncated
 
             if terminated:
-                esito = 'GOAL' if reward > 0 else 'COLLISIONE'
+                outcome = 'GOAL' if reward > 0 else 'COLLISION'
 
             buffer.add(obs, action, reward, next_obs, done)
             obs        = next_obs
@@ -197,10 +198,10 @@ def main():
         if epsilon > EPSILON_MIN:
             epsilon = max(EPSILON_MIN, epsilon * BETA)
 
-        goal_hit = (esito == 'GOAL')
-        if goal_hit:             goals_total += 1
-        elif esito == 'COLLISIONE': collisions += 1
-        else:                    timeouts    += 1
+        goal_hit = (outcome == 'GOAL')
+        if goal_hit:               goals_total += 1
+        elif outcome == 'COLLISION': collisions += 1
+        else:                       timeouts    += 1
 
         goal_history.append(goal_hit)
         ep_rewards.append(ep_reward)
@@ -225,7 +226,7 @@ def main():
               f'avg {avg_rew:8.1f}  '
               f'rate {goal_rate:.2f}  '
               f'eps {epsilon:.4f}  '
-              f'{elapsed:.1f}min  [{esito}] [{bias_str}]')
+              f'{elapsed:.1f}min  [{outcome}] [{bias_str}]')
 
         if goal_hit:
             path = os.path.join(SAVE_DIR, f'map3_ep{ep}_r{int(ep_reward)}.weights.h5')
@@ -243,14 +244,14 @@ def main():
 
         if consec_above >= STOP_N:
             print(f'\n{"="*65}')
-            print(f'MAP3 COMPLETATA! goal_rate={goal_rate:.2%}')
-            print(f'Goal:{goals_total} | Collisioni:{collisions} | Timeout:{timeouts}')
+            print(f'MAP3 DONE! goal_rate={goal_rate:.2%}')
+            print(f'Goals:{goals_total} | Collisions:{collisions} | Timeouts:{timeouts}')
             break
 
     final = os.path.join(SAVE_DIR, 'map3_FINAL.weights.h5')
     q_net.save_weights(final)
-    print(f'\nPesi finali map3: {final}')
-    print(f'→ Carica questi pesi in train_dqn_map2.py come LOAD_WEIGHTS')
+    print(f'\nFinal map3 weights: {final}')
+    print(f'-> Load these weights in train_map2.py as LOAD_WEIGHTS')
     env.close()
 
 
