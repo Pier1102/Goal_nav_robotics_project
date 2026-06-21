@@ -20,14 +20,14 @@ N_ACTIONS      = 11
 LINEAR_VEL     = 0.2
 ANGULAR_VELS   = [-1.5 + 0.3 * i for i in range(11)]
 COLLISION_DIST = 0.20
-SPAWN_Z        = 0.15 
+SPAWN_Z        = 0.15
 WORLD_NAME     = 'test_map_3'
 GOAL_X      =  4.98
 GOAL_Y      = -0.45
 GOAL_RADIUS =  1.0
 
 # ---------------------------------------------------------------------------
-# Spawn — zone sicure 
+# Spawn points
 # ---------------------------------------------------------------------------
 SPAWN_NEAR = [
     ( 4.79,  2.96, -1.5708),
@@ -37,11 +37,11 @@ SPAWN_NEAR = [
 SPAWN_ALL = [
     ( 4.79,  2.96, -1.5708),
     ( 0.53, -2.81,  0.0000),
-    (-4.00,  3.2,  0.0000), 
-    (-3.46, -3.14,  0.0000), 
+    (-4.00,  3.2,  0.0000),
+    (-3.46, -3.14,  0.0000),
 ]
 
-EP_BIAS = 300
+EP_BIAS = 300   # episodes <= EP_BIAS spawn only from SPAWN_NEAR
 
 # ---------------------------------------------------------------------------
 # Reward
@@ -53,7 +53,7 @@ W_PROGRESS  =   20.0
 W_HEADING   =    1.0
 
 # ---------------------------------------------------------------------------
-# Nodo ROS2
+# ROS 2 node
 # ---------------------------------------------------------------------------
 class _RosNode(Node):
     def __init__(self):
@@ -123,10 +123,13 @@ class _RosNode(Node):
             self._pause(False)
             time.sleep(0.5)
         except Exception as e:
-            print(f'  [set_pose] errore: {e}')
+            print(f'  [set_pose] error: {e}')
             self._pause(False)
 
 
+# ---------------------------------------------------------------------------
+# StormEnv — Map 3
+# ---------------------------------------------------------------------------
 class StormEnv(gym.Env):
     def __init__(self, max_steps=1500):
         super().__init__()
@@ -143,12 +146,12 @@ class StormEnv(gym.Env):
         self._node = _RosNode()
         threading.Thread(target=rclpy.spin, args=(self._node,), daemon=True).start()
 
-        print('[StormEnv map3] In attesa dei sensori...')
+        print('[StormEnv map3] Waiting for sensors...')
         t0 = time.time()
         while self._node.get_scan() is None or self._node.get_odom() is None:
             time.sleep(0.1)
-            if time.time() - t0 > 15.0: raise RuntimeError('Timeout sensori.')
-        print(f'[StormEnv map3] Connesso. Goal=({GOAL_X},{GOAL_Y})')
+            if time.time() - t0 > 15.0: raise RuntimeError('Sensor timeout.')
+        print(f'[StormEnv map3] Connected. Goal=({GOAL_X},{GOAL_Y})')
 
     def step(self, action):
         self._send_action(action)
@@ -178,7 +181,6 @@ class StormEnv(gym.Env):
 
         return obs, reward, terminated, truncated, {}
 
- 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.ep_count += 1
@@ -186,10 +188,12 @@ class StormEnv(gym.Env):
             self._stop()
             time.sleep(0.1)
 
-        self._reset_pose(options) 
+        self._reset_pose(options)
         self.step_count = 0
         self._stop()
 
+        # Odometry is invalidated and re-acquired close to the new spawn,
+        # to avoid using a stale reading from before the teleport.
         self._node.invalidate_odom()
         time.sleep(0.8)
 
@@ -247,8 +251,8 @@ class StormEnv(gym.Env):
     def _stop(self):
         self._node.pub_cmd(0.0, 0.0)
 
-    # === Modifica: Accetta `options` per forzare lo spawn ===
     def _reset_pose(self, options=None):
+        # 'spawn' in options forces an exact spawn point (used by benchmarks)
         if options is not None and 'spawn' in options:
             base_x, base_y, base_yaw = options['spawn']
         else:
@@ -258,7 +262,7 @@ class StormEnv(gym.Env):
         x   = base_x   + random.uniform(-0.15, 0.15)
         y   = base_y   + random.uniform(-0.15, 0.15)
         yaw = base_yaw + random.uniform(-0.25, 0.25)
-        
+
         self.spawn_x, self.spawn_y = x, y
         qz, qw = math.sin(yaw / 2.0), math.cos(yaw / 2.0)
         self._node.set_pose(x, y, SPAWN_Z, 0.0, 0.0, qz, qw)
