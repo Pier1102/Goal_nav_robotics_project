@@ -14,7 +14,7 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 
 # ---------------------------------------------------------------------------
-# Costanti hardware
+# Hardware constants
 # ---------------------------------------------------------------------------
 N_LIDAR        = 50
 RANGE_MAX      = 5.0
@@ -26,20 +26,20 @@ SPAWN_Z        = 0.05
 WORLD_NAME     = 'test_map_2'
 
 # ---------------------------------------------------------------------------
-# Goal — coordinate assolute mondo test_map_2
+# Goal — absolute world coordinates, test_map_2
 # ---------------------------------------------------------------------------
 GOAL_X      = 5.00
 GOAL_Y      = 4.50
 GOAL_RADIUS = 0.8
 
 # ---------------------------------------------------------------------------
-# Spawn — I 9 punti strategici per il training e il benchmark
+# Spawn points — 9 fixed locations used for training and benchmarking
 # ---------------------------------------------------------------------------
 SPAWN_ALL = [
-    ( 3.50,  4.50,  0.00),   # vicino goal   ~1.5m  0 curve
-    ( 5.60,  3.00,  1.50),   # curva leggera ~2.5m  1 curva
-    ( 3.40,  0.59,  1.50),   # intermedio
-    ( 2.20, -0.09,  0.00),   # 3 curve     ~7.0m
+    ( 3.50,  4.50,  0.00),
+    ( 5.60,  3.00,  1.50),
+    ( 3.40,  0.59,  1.50),
+    ( 2.20, -0.09,  0.00),
     (-4.38,  3.00,  1.50),
     ( 2.10, -0.05,  0.00),
     (-0.25,  3.31, -0.60),
@@ -61,7 +61,7 @@ DELTA_CLAMP =    0.10
 
 
 # ---------------------------------------------------------------------------
-# Nodo ROS2
+# ROS 2 node
 # ---------------------------------------------------------------------------
 class _RosNode(Node):
     def __init__(self):
@@ -137,12 +137,12 @@ class _RosNode(Node):
             print('  [set_pose] timeout!')
             self._pause(False)
         except Exception as e:
-            print(f'  [set_pose] errore: {e}')
+            print(f'  [set_pose] error: {e}')
             self._pause(False)
 
 
 # ---------------------------------------------------------------------------
-# StormEnv map2
+# StormEnv — Map 2
 # ---------------------------------------------------------------------------
 class StormEnv(gym.Env):
 
@@ -168,13 +168,13 @@ class StormEnv(gym.Env):
         self._node = _RosNode()
         threading.Thread(target=rclpy.spin, args=(self._node,), daemon=True).start()
 
-        print('[StormEnv map2] In attesa dei sensori...')
+        print('[StormEnv map2] Waiting for sensors...')
         t0 = time.time()
         while self._node.get_scan() is None or self._node.get_odom() is None:
             time.sleep(0.1)
             if time.time() - t0 > 15.0:
-                raise RuntimeError('Timeout sensori. Gazebo avviato con test_map_2?')
-        print(f'[StormEnv map2] Connesso. Goal=({GOAL_X},{GOAL_Y})')
+                raise RuntimeError('Sensor timeout. Is Gazebo running with test_map_2?')
+        print(f'[StormEnv map2] Connected. Goal=({GOAL_X},{GOAL_Y})')
 
     # -----------------------------------------------------------------------
     def step(self, action):
@@ -221,14 +221,14 @@ class StormEnv(gym.Env):
             self._stop()
             time.sleep(0.1)
 
-        # Gestione opzioni (fondamentale per il Benchmark Test)
+        # 'spawn' in options forces an exact spawn point (used by benchmarks)
         exact = options['spawn'] if options and 'spawn' in options else None
         self._reset_pose(exact_spawn=exact)
 
         self.step_count = 0
         self._stop()
 
-        # Aspetta stabilizzazione odom
+        # Wait for odometry to stabilize
         time.sleep(0.3)
         prev_x, prev_y = None, None
         t0 = time.time()
@@ -243,7 +243,7 @@ class StormEnv(gym.Env):
                 prev_x, prev_y = x, y
             time.sleep(0.05)
 
-        # Aspetta scan fresco
+        # Wait for a fresh scan
         seq_before = self._node.get_scan_seq()
         t0 = time.time()
         while self._node.get_scan_seq() < seq_before + 3:
@@ -254,7 +254,6 @@ class StormEnv(gym.Env):
         self._stop()
         time.sleep(0.1)
 
-        # Salva riferimento odom
         odom = self._node.get_odom()
         self.odom_x0 = odom.pose.pose.position.x if odom else 0.0
         self.odom_y0 = odom.pose.pose.position.y if odom else 0.0
@@ -262,9 +261,8 @@ class StormEnv(gym.Env):
         obs            = self._get_obs()
         self.dist_prev = obs[N_LIDAR]
 
-        # Log pulito al reset
         if exact is not None:
-            print(f'  [RESET Benchmark] spawn=({self.spawn_x:.2f},{self.spawn_y:.2f}) dist_goal={obs[N_LIDAR]:.2f}m')
+            print(f'  [RESET benchmark] spawn=({self.spawn_x:.2f},{self.spawn_y:.2f}) dist_goal={obs[N_LIDAR]:.2f}m')
         else:
             print(f'  [RESET ep={self.ep_count}] spawn=({self.spawn_x:.2f},{self.spawn_y:.2f}) dist_goal={obs[N_LIDAR]:.2f}m')
 
@@ -322,19 +320,19 @@ class StormEnv(gym.Env):
 
     def _reset_pose(self, exact_spawn=None):
         if exact_spawn is not None:
-            # Modalità Benchmark: usa esattamente le coordinate richieste dal test
+            # Benchmark mode: use the exact requested coordinates
             x, y, yaw = exact_spawn
         else:
-            # Modalità Training: pesca a caso dai punti strategici con rumore
+            # Training mode: random spawn point with added noise
             base_x, base_y, base_yaw = random.choice(SPAWN_ALL)
             x   = base_x   + random.uniform(-0.08, 0.08)
             y   = base_y   + random.uniform(-0.08, 0.08)
             yaw = base_yaw + random.uniform(-0.20, 0.20)
-            
+
         self.spawn_x = x
         self.spawn_y = y
         qz = math.sin(yaw / 2.0)
         qw = math.cos(yaw / 2.0)
-        
+
         self._node.set_pose(x, y, SPAWN_Z, 0.0, 0.0, qz, qw)
         time.sleep(0.3)
